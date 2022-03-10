@@ -1,0 +1,72 @@
+---
+title: "class 09"
+author: "Ramola Baviskar (PID A12228297)"
+date: "2/15/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+read.csv("Data Export Summary.csv")
+  
+```
+```{r}
+163351/187423 * 100
+10139/187423 * 100
+```
+>Q1: 87.15633%
+>Q2: 5.409688%
+>Q3. 3819
+>Q4. The 2 hydrogen atoms show up as charges.
+
+```{r}
+library(bio3d)
+pdb <- read.pdb("1hsg")
+```
+
+>Q10. msa
+>Q11. devtools
+>Q12. TRUE
+
+```{r}
+library(bio3d)
+aa <- get.seq("1ake_A")
+
+```
+
+>Q13. 214
+
+```{r}
+b <- blast.pdb(aa)
+hits <- plot(b)
+
+```
+
+```{r}
+head(hits$pdb.id)
+hits <- NULL
+hits$pdb.id <- c('1AKE_A','6S36_A','6RZE_A','3HPR_A','1E4V_A','5EJE_A','1E4Y_A','3X2S_A','6HAP_A','6HAM_A','4K46_A','3GMT_A','4PZL_A')
+```
+
+```{r}
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+
+```{r}
+library(muscle)
+```
+```{r}
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+
+
+
+

@@ -1,0 +1,95 @@
+---
+title: "Class 09"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+read.csv("Data Export Summary.csv")
+  
+
+```
+```{r}
+163351/187423 * 100
+10139/187423 * 100
+```
+>Q1: 87.15633%
+>Q2: 5.409688%
+>Q3. 3819
+>Q4. The 2 hydrogen atoms show up as charges.
+
+```{r}
+library(bio3d)
+pdb <- read.pdb("1hsg")
+```
+>Q10. msa
+>Q11. devtools
+>Q12. TRUE
+
+```{r}
+library(bio3d)
+aa <- get.seq("1ake_A")
+```
+
+>Q13. 214
+
+
+```{r}
+b <- blast.pdb(aa)
+hits <- plot(b)
+```
+
+
+```{r}
+head(hits$pdb.id)
+hits <- NULL
+hits$pdb.id <- c('1AKE_A','6S36_A','6RZE_A','3HPR_A','1E4V_A','5EJE_A','1E4Y_A','3X2S_A','6HAP_A','6HAM_A','4K46_A','3GMT_A','4PZL_A')
+```
+
+```{r}
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+```{r}
+library(muscle)
+```
+
+```{r}
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+## GitHub Documents
+
+This is an R Markdown format used for publishing markdown documents to GitHub. When you click the **Knit** button all R code chunks are run and a markdown file (.md) suitable for publishing to GitHub is generated.
+
+## Including Code
+
+You can include R code in the document as follows:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
