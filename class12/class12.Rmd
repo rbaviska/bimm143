@@ -1,0 +1,257 @@
+---
+title: 'Class 12: RNA-Seq Mini Project'
+author: "Ramola Baviskar (PID A12228297)"
+date: "2/24/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+Here we'll work on a complete differential expression analysis project. We'll use DESeq2 for this.
+
+
+```{r setup, message=FALSE} 
+library(DESeq2)
+library(ggplot2)
+library(org.Hs.eg.db)
+library(AnnotationDbi)
+library(pathview)
+library(gage)
+library(gageData)
+```
+
+#Step 1: Input the counts & metadata files.
+```{r}
+countData <- read.csv("GSE37704_featurecounts.csv", row.names = 1)
+colData <- read.csv("GSE37704_metadata.csv")
+```
+
+```{r}
+colData
+```
+
+
+```{r}
+countData <- countData[,-1]
+head(countData[,-1])
+```
+```{r}
+colData$id
+colnames(countData)
+```
+
+```{r}
+all(colData$id == colnames(countData))
+```
+
+Q. Complete the code below to filter countData to exclude genes (i.e. rows) where we have 0 read count across all samples (i.e. columns).
+
+```{r}
+head(countData)
+counts <- countData [rowSums(countData) != 0,]
+head(counts)
+```
+
+
+#Step 2: Run DESeq
+The steps here are to first set up the object required by DESeq using the `DESeqDataSetFromMatrix()` function. This will store the counts and metadata along w/ the design of the experiment (ie where in the metadata we have the description of what the columns of counts correspond to.)
+ `
+```{r}
+dds <- DESeqDataSetFromMatrix(countData=countData,
+                             colData=colData,
+                             design=~condition)
+
+```
+
+Now I can run my differential expression w/ `DESeq()`
+```{r DESeq(dds)}
+dds <- DESeq(dds)
+```
+
+Now get my results from this.
+```{r}
+res <- results(dds)
+res
+```
+
+```{r}
+summary(res)
+```
+
+
+
+
+
+
+
+
+
+#Step 4: Add annotation
+Q. Use the mapIDs() function multiple times to add SYMBOL, ENTREZID and GENENAME annotation to our results by completing the code below.
+```{r}
+columns(org.Hs.eg.db)
+```
+
+```{r}
+
+res$symbol <- mapIds(org.Hs.eg.db,
+                    keys=row.names(res), 
+                    keytype="ENSEMBL",
+                    column="SYMBOL",
+                    multiVals="first")
+```
+
+```{r}
+
+res$entrez <- mapIds(org.Hs.eg.db,
+                    keys=row.names(res),
+                    keytype="ENSEMBL",
+                    column="ENTREZID",
+                    multiVals="first")
+```
+
+```{r}
+res$name <-  mapIds(org.Hs.eg.db,
+                    keys=row.names(res),
+                    keytype="ENSEMBL",
+                    column="GENENAME",
+                    multiVals="first")
+```
+
+
+
+#Step 3: Volcano plot
+Common summary figure that gives a good overview of the results.
+```{r}
+plot(res$log2FoldChange, -log(res$padj))
+```
+
+Try ggplot for this.
+```{r}
+tmp <- as.data.frame(res)
+tmp$fc <- abs(res$log2FoldChange) > 2
+ggplot(tmp) + 
+  aes(log2FoldChange, -log(padj), col=fc) +
+  geom_point()
+```
+
+```{r}
+BiocManager::install("EnhancedVolcano")
+library(EnhancedVolcano)
+
+```
+```{r}
+x <- as.data.frame(res)
+
+EnhancedVolcano(x,
+    lab = x$symbol,
+    x = 'log2FoldChange',
+    y = 'pvalue')
+```
+
+
+#Step 5: Pathway analysis
+
+Here we try to bring back the biology and help with the interpretation of our results. We try to answer the question: which pathways and functions feature heavily in our differentially expressed genes?
+Recall that we need a "vector of iportance" as input for GAGE that has ENTREZ ids set as the names attribute.
+
+```{r}
+foldchange <- res$log2FoldChange
+names(foldchange) <- res$entrez
+```
+
+
+```{r}
+data(kegg.sets.hs)
+data(sigmet.idx.hs)
+kegg.sets.hs = kegg.sets.hs[sigmet.idx.hs]
+head(kegg.sets.hs, 2)
+```
+
+```{r}
+keggres = gage(foldchange, gsets=kegg.sets.hs)
+attributes(keggres)
+```
+Look at the first 2 downregulated pathways.
+```{r}
+head(keggres$less, 2)
+```
+
+```{r}
+pathview(foldchange, pathway.id="hsa04110")
+```
+![](hsa04110.pathview.png)
+
+
+##Gene Ontology analysis
+We can use a different gene set database (we used KEGG above) to provide different (but hopefully complementary) information. We will try GO here w/ a focus on Biological Pathways (BP) component of GO. 
+```{r}
+data(go.sets.hs)
+data(go.subs.hs)
+gobpsets = go.sets.hs[go.subs.hs$BP]
+
+gobpres = gage(foldchange, gsets=gobpsets, same.dir=TRUE)
+
+lapply(gobpres, head)
+head(gobpres$less)
+```
+
+##Reactome 
+We can use Reactome either as an R package (like above) or we an use the website. The website needs a file of "gene important" just like gage above. Reactome is a database consisting of biological molecules and their relation to pathways and processes.
+
+```{r}
+sig_genes <- res[res$padj <= 0.05 & !is.na(res$padj), "symbol"]
+
+```
+
+```{r}
+write.table(sig_genes, file="significant_genes.txt", row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+#Save my results
+```{r}
+write.csv(res, file="deseq_results.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
