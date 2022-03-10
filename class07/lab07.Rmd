@@ -1,0 +1,229 @@
+---
+title: "Class07 Machine Learning 1"
+author: "Ramola Baviskar  (PID A12228297)"
+date: "2/8/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+
+#Clustering methods
+
+Find groups (aka) clusters in my data
+
+#K-means clustering
+
+Make up some data to test with. 
+
+```{r}
+#Make up some data w/ 2 clear groups
+tmp <- c( rnorm(30, mean = 3), rnorm(30, mean = -3) )
+x  <- cbind(tmp, rev(tmp))
+
+plot(x)
+ 
+```
+
+
+
+The 'kmeans()' function does k-means clustering.
+>Q1. How many points are in each cluster?
+
+```{r}
+k <- kmeans(x, centers=4, nstart=20)
+k
+```
+We can use the dollar syntax to get at the results (components of the returned list).
+
+
+>Q2. What 'component' pf your result object details:
+  -cluster size?
+  -cluster assignment/membership?
+  -cluster center?
+
+```{r}
+k$size
+k$cluster
+k$centers
+```
+
+
+
+
+>Q3. Plot x colored by the kmeans cluster assigment and add cluster centers as blue points.
+
+```{r}
+plot(x, col=k$cluster)
+points(k$centers, col="blue", pch=15, cex=2)
+```
+
+
+##Hierarchical Clustering
+
+
+The hclust() fucntion needs a distance matrix as input nor our original data.For this we use the 
+'dist(' function
+
+```{r}
+hc <- hclust(dist(x))
+hc
+
+```
+
+
+```{r}
+plot(hc)
+abline(h=10, col="red")
+```
+
+To get our cluster membership vector we must cut our tree. For this we use 'cutree()'.
+
+```{r}
+cutree(hc, h=10)
+```
+
+We can cut by a given height (h=) or into a given number of k groups w/ k=.
+
+```{r}
+cutree(hc, k=2)
+```
+
+#Principal Component Analysis
+
+##PCA of UK food data
+
+Let's read the data about the stuff people in the UK eat and drink:
+```{r}
+url <- "https://tinyurl.com/UK-foods"
+x <- read.csv(url, row.names=1)
+```
+ 
+ 
+ Look at the first bit of file: 
+```{r}
+head(x)
+```
+ 
+ How many columns in dataset:
+```{r}
+ncol(x)
+```
+Q1. How many rows and columns are in your new data frame named x? What R functions could you use to answer this questions?
+  4 columns and 17 rows
+Q2. Which approach to solving the ‘row-names problem’ mentioned above do you prefer and why? Is one approach more robust than another under certain circumstances?
+  Using the codeblock and running it multiple times eventually led to the removal of all the columns, so it's not my preferred approach as I feel like it's error-prone.
+
+We can make some plots to try to understand this data a bit more. for example barplots:
+
+```{r}
+
+barplot(as.matrix(x), beside=TRUE)
+```
+Q3: Changing what optional argument in the above barplot() function results in the following plot?
+  Changing the 'beside' function from TRUE to FALSE would result in a stacked plot.
+```{r}
+barplot(as.matrix(x), beside=FALSE)
+```
+
+
+
+
+#PCA
+
+
+The main base R function for PCA is 'prcomp()'.
+```{r}
+PCA <- prcomp(t(x))
+summary(PCA)
+```
+
+
+
+
+What's in this returned PCA object?
+
+
+
+```{r}
+attributes(PCA)
+```
+```{r}
+plot(PCA$x[,1:2], col=c("orange", "red", "blue", "green"), pch=15)
+text(PCA$x[,1], PCA$x[,2], labels=colnames(x))
+```
+Q7. Complete the code  to generate a plot of PC1 vs PC2. T
+Q8. Customize your plot so that the colors of the country names match the colors in our UK and Ireland map and table at start of this document.
+
+We can look at how the variables contribute to our new PCs by examining the 'PCA$rotation' component of our results.
+
+```{r}
+barplot(PCA$rotation[,1], las=2)
+```
+
+
+
+```{r}
+url2 <- "https://tinyurl.com/expression-CSV"
+rna.data <- read.csv(url2, row.names=1)
+head(rna.data)
+
+nrow(rna.data)
+ncol(rna.data)
+```
+Q10: How many genes and samples are in this data set?
+  100 genes;  10 samples
+
+
+
+Let's do PCA of htis dataset; first take the transpose as that's what hte prcomp() function wants.
+
+```{r}
+pca <- prcomp(t(rna.data), scale=TRUE)
+summary(pca)
+```
+
+
+We can make our score plot (aka PCA plot) from the 'pca$x'.
+
+```{r}
+plot(pca$x[,1], pca$x[,2])
+```
+
+Make a color vector by wt and ko
+```{r}
+rep("red", 5)
+rep("blue", 5)
+colvec <- c(rep("red", 5), rep("blue", 5))
+plot(pca$x[,1], pca$x[,2], col=colvec, pch=15)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
