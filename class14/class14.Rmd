@@ -1,0 +1,191 @@
+---
+title: "class 14"
+author: "Ramola Baviskar (PID A12228297)"
+date: "3/7/2022"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+>Important vaccination data
+
+```{r}
+vax <- read.csv("vaccinedata.csv")
+head(vax)
+```
+>Q1. persons_fully_vaccinated
+>Q2. zip_code_tabulation_area
+>Q3. 2021-01-05
+>Q4. 2022-02-22
+
+
+```{r}
+skimr::skim(vax)
+```
+
+```{r}
+sum(is.na(vax$persons_fully_vaccinated))
+```
+
+```{r}
+nrow(vax)
+sum(is.na(vax$persons_fully_vaccinated)) / nrow(vax)
+```
+
+>Q5. 9
+>Q6. 18338
+>Q7. ~17%
+>Q8. Some counties may not have collected this data yet or haven't yet submitted it.
+
+```{r}
+library(lubridate)
+vax$as_of_date <- ymd(vax$as_of_date)
+today <- today() - vax$as_of_date
+now <- vax$as_of_date[nrow(vax)] - vax$as_of_date
+```
+
+
+```{r}
+date <- vax[, c("as_of_date")]
+length(unique(date))
+```
+
+>Q9. 5=425-420
+>Q10. 61
+
+```{r}
+library(zipcodeR)
+```
+
+```{r}
+geocode_zip('92037')
+```
+
+```{r}
+zip_distance('92037','92109')
+```
+
+```{r}
+reverse_zipcode(c('92037', "92109"))
+```
+
+```{r}
+sd <- vax[ "San Diego" , ]
+library(dplyr)
+sd <- filter(vax, county == "San Diego")
+nrow(sd)
+sd.10 <- filter(vax, county == "San Diego" & age5_plus_population > 10000)
+```
+
+```{r}
+sd <- filter(vax, county == "San Diego")
+code <- sd[, c("zip_code_tabulation_area")]
+length(unique(code))
+```
+
+>Q11. 107
+
+```{r}
+sd12 <- filter(vax, county == "San Diego" & age12_plus_population > 60000)
+sd12[, c("age12_plus_population")]
+which.max("age12_plus_population")
+```
+
+>Q12. 92154
+
+```{r}
+fullyvaxxed <- filter(vax, county == "San Diego", as_of_date == "2022-02-22")
+nrow(fullyvaxxed)
+percentvaxxed <- fullyvaxxed[, c("percent_of_population_fully_vaccinated")]
+percentvaxxedomit <- na.omit(percentvaxxed)
+sum(percentvaxxedomit)/nrow(fullyvaxxed) * 100
+```
+
+>Q13. 69.75742%
+
+```{r}
+library(ggplot2)
+```
+
+>Q14.
+
+```{r}
+ggplot(data=fullyvaxxed, aes(percent_of_population_partially_vaccinated)) + geom_histogram()
+```
+
+```{r}
+ucsd <- filter(sd, zip_code_tabulation_area=="92037")
+ucsd[1,]$age5_plus_population
+```
+
+>Q15. 
+>Q16.
+
+```{r}
+lineplot <- ggplot(ucsd) +
+  aes(x=as_of_date, y=percent_of_population_fully_vaccinated) +
+  geom_line() +
+  geom_line(group=1) +
+  ylim(c(0,1)) +
+  labs(x="Date", y="Percent Vaccinated") 
+lineplot + geom_hline(yintercept=0.733385, linetype="dashed", 
+                color = "red", size=1)
+```
+
+```{r}
+vax.36 <- filter(vax, age5_plus_population > 36144 & as_of_date == "2022-02-22")
+mean(vax.36[, c("percent_of_population_fully_vaccinated")])
+min(vax.36[, c("percent_of_population_fully_vaccinated")])
+median(vax.36[, c("percent_of_population_fully_vaccinated")])
+max(vax.36[, c("percent_of_population_fully_vaccinated")])
+quantile(vax.36[, c("percent_of_population_fully_vaccinated")])
+```
+
+>Q17. Min:0.3881090 1st Q:0.6539015 Median:0.7332750 3rd Q:0.8027110 Max:1.0000000 Mean:0.733385
+>Q18. 
+
+```{r}
+ggplot(data=ucsd, aes(percent_of_population_partially_vaccinated)) + geom_histogram()
+```
+
+```{r}
+vax %>% filter(as_of_date == "2022-02-22") %>%  
+  filter(zip_code_tabulation_area=="92040") %>%
+  select(percent_of_population_fully_vaccinated)
+vax %>% filter(as_of_date == "2022-02-22") %>%  
+  filter(zip_code_tabulation_area=="92109") %>%
+  select(percent_of_population_fully_vaccinated)
+```
+
+>Q19: 92040: 0.551304
+      92019: 0.723044 Both below average.
+      
+```{r}
+vax.36.all <- filter(vax, age5_plus_population > 36144)
+```
+
+>Q20.
+
+```{r}
+ggplot(vax.36.all) +
+  aes(x=as_of_date, y=percent_of_population_fully_vaccinated, 
+      group=zip_code_tabulation_area) +
+  geom_line(alpha=0.2, color="blue") +
+  ylim(c(0,1)) +
+  labs(x="Date", y="Percent Vaccinated",
+       title="Vaccination Rates Across CA",
+       subtitle="Only areas with a population above 36,000 are shown") +
+  geom_hline(yintercept = 0.733385, linetype="dashed")
+```
+
+>Q21. I have mixed feelings about it, since there are parts of the state with quite low vaccination rates as of just a few days ago; anyone who travels there has a greater risk of coming into contact with the virus. 
+
+
+
+
+
