@@ -1,0 +1,391 @@
+---
+title: "class 11"
+author: "Ramola Baviskar (PID A12228297)"
+date: "2/22/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Step 1: Read in--count data and metadata (col data).
+```{r}
+counts <- read.csv("airway_scaledcounts.csv", row.names=1)
+metadata <-  read.csv("airway_metadata.csv")
+
+```
+
+```{r}
+head(counts)
+```
+```{r}
+head(metadata)
+```
+>Always need to double check that the columns of countdata dn coldata (metadata) match.
+
+
+```{r}
+metadata$id
+```
+
+
+```{r}
+colnames(counts)
+```
+
+```{r}
+metadata$id == colnames(counts)
+```
+ 
+I can use the all() function to make sure all values match (ie are true).
+```{r}
+all(c(metadata$id == colnames(counts)))
+```
+
+#Step 2: Extract control and treated counts to compare. 
+>First let's extract the control counts columns.
+ 
+```{r}
+control.ids <- metadata[metadata$dex == "control",]$id
+control.counts <- counts[,control.ids]
+head(control.counts)
+#Take the mean count value per gene.
+control.mean <- rowMeans(control.counts)
+head(control.mean)
+```
+```{r}
+treated.ids <- metadata[metadata$dex == "treated",]$id
+treated.counts <- counts[,treated.ids]
+head(treated.counts)
+#Take the mean count value per gene.
+treated.mean <- rowMeans(treated.counts)
+head(treated.mean)
+```
+Now we can make a plot comparing treated v. control.
+```{r}
+plot(treated.mean, control.mean)
+```
+>It's all bunched up near the bottom! When we see data that's so helily skewed like this over a wide range of values we start to think of log transformations to make our analysis easier.
+```{r}
+plot(treated.mean, control.mean, log="xy", xlab="log of drug treated counts", ylab="log of control counts")
+```
+
+We are after changes in gene expression: treated vs. control and this would represent points (i.e. genes) which didn't lie on the diagonal.
+We like to work with log2 values.
+```{r}
+log2(20/20)
+```
+```{r}
+log2(40/20)
+```
+```{r}
+log2(20/40)
+```
+```{r}
+log2(80/20)
+```
+>Now let's calculate the log2 fold change. 
+
+```{r}
+log2fc <- log2(treated.mean/control.mean)
+```
+Store my work thus far:
+```{r}
+meancounts <- data.frame(control.mean, treated.mean, log2fc)
+head(meancounts)
+```
+
+```{r}
+z <- data.frame(x=c(10, 0, 10, 40),
+           y=c(10, 0, 30, 0))
+```
+
+```{r}
+z==0
+which(z==0)
+which(z==0, arr.ind=TRUE)
+```
+
+
+```{r}
+i <- which(z==0, arr.ind=TRUE)
+unique(i[,1])
+```
+
+Now do it for our real dataset
+
+
+Filter our data to remove genes w/ zero expression values
+
+```{r}
+meancounts$log2fc <- log2(meancounts[,"treated.mean"]/meancounts[,"control.mean"])
+head(meancounts)
+zero.vals <- which(meancounts[,1:2]==0, arr.ind=TRUE)
+to.rm <- unique(zero.vals[,1])
+mycounts <- meancounts[-to.rm,]
+head(mycounts)
+
+```
+How many genes have we got left?
+
+```{r}
+nrow(mycounts)
+```
+
+A common threshold use for calling something differentially expressed is a log2(FoldChange) of greater than 2 or less than -2. Let's filter the dataset both ways to see how many genes are up- or down-regulated.
+
+```{r}
+up.ind <- mycounts$log2fc > 2
+down.ind <- mycounts$log2fc < (-2)
+head(up.ind)
+head(down.ind)
+sum(up.ind)
+sum(down.ind)
+```
+
+We're missing the stats--are these differences significant?
+
+#DESeq2 analysis
+```{r}
+library(DESeq2)
+
+```
+
+This package wants input in a specific way: 
+```{r}
+dds <- DESeqDataSetFromMatrix(countData=counts, 
+                              colData=metadata, 
+                              design=~dex)
+dds
+```
+
+We can now run the DESeq2
+```{r}
+dds <- DESeq(dds)
+```
+ To get the results back in a useful way:
+```{r}
+res <- results(dds)
+res
+
+```
+
+#Volcano plots
+Let's make a volcano plot. These summary figures are often used to highlight the proportion of
+
+```{r}
+plot(res$log2FoldChange, res$padj)
+```
+
+```{r}
+plot(res$log2FoldChange,  log(res$padj))
+```
+
+```{r}
+plot(res$log2FoldChange,  -log(res$padj))
+abline(h=-log(0.05), col="gray")
+abline(v=c(-2,2), col="gray")
+plot(res$log2FoldChange, -log(res$padj))
+```
+
+I want ot polish this main results figure by adding color to the genes I will focus on next day.
+```{r}
+#Let's make a gray vector for everything
+mycols <- rep("gray", nrow(res))
+
+#Now I'll overwrite the small pasj values
+mycols[res$padj < 0.005] <- "red"
+
+mycols[ abs(res$log2FoldChange) < 2 ] <- "gray"
+plot(res$log2FoldChange, -log(res$padj), col=mycols)
+abline(h=-log(0.05), col="gray")
+abline(v=c(-2,2), col="gray")
+title("Volcano Plot")
+```
+This is a common overall summary figure because it combines big changes (in terms of log2 FoldChange) and significant changes (in terms of p-val) all in one figure.
+
+
+
+
+
+
+#Adding annotation data
+
+To help interpret our results we need to understand what differentially expressed genes are. A first step here is to get the gene names (ie gene SYMBOLS).
+
+```{r}
+library("AnnotationDbi")
+BiocManager::install("org.Hs.eg.db")
+library("org.Hs.eg.db")
+```
+
+What DB identifiers can I look up?
+```{r}
+columns(org.Hs.eg.db)
+```
+
+We'll use the 'mapIds()' function to translate between different ids. 
+```{r}
+res$symbol = mapIds(org.Hs.eg.db,
+                    keys=row.names(res), 
+                    keytype="ENSEMBL",
+                    column="SYMBOL",
+                    multiVals="first")
+```
+
+ˆ
+```{r}
+res$entrez <- mapIds(org.Hs.eg.db,
+                    keys=row.names(res), 
+                    keytype="ENSEMBL",
+                    column="ENTREZID",
+                    multiVals="first")
+
+res$genename <- mapIds(org.Hs.eg.db,
+                    keys=row.names(res), 
+                    keytype="ENSEMBL",
+                    column="GENENAME",
+                    multiVals="first")
+
+head(res)
+```
+#Pathway analysis with R and Bioconductor
+
+Here we use the GAGE package (which stands for Generally Applicable Gene set Enrichment), to do KEGG pathway enrichment analysis on our RNA-seq based differential expression results.
+I need to install the GAGE package along w/ the pathview package for generating pathway figures from my results.
+# Run in your R console (i.e. not your Rmarkdown doc!)
+BiocManager::install( c("pathview", "gage", "gageData") )
+
+Now load up the packages and have a look at the first 2 pathways in KEGG.
+
+```{r}
+library(pathview)
+library(gage)
+library(gageData)
+
+data(kegg.sets.hs)
+
+# Examine the first 2 pathways in this kegg set for humans
+head(kegg.sets.hs, 2)
+```
+
+Recall that vectors can have a names attritbute that helps w/ bookkeeping just like colnames and rownames. 
+```{r}
+x <- c(40, 70, 20)
+names(x) <- c("lisa", "xinqiu", "barry")
+x
+```
+
+
+We need a vector of fold-change labeled w/ the names of our genes in ENTREZ format.
+```{r}
+foldchanges <- res$log2FoldChange
+
+names(foldchanges) = res$entrez
+head(foldchanges)
+```
+
+Now we can run the GAGE analysis passing in our foldchange vector and the KEGG genesets we're interested in.
+```{r}
+#Get the results
+keggres = gage(foldchanges, gsets=kegg.sets.hs)
+```
+
+Let's look at what's contained in this `keggres` results object (ie its attributes).
+```{r}
+attributes(keggres)
+```
+
+```{r}
+# Look at the first three down (less) pathways
+head(keggres$less, 3)
+```
+
+Now we can map the foldchange results onto any KEGG pathway. We'll do this manually first by selecting one of the pathway IDs from above.
+```{r}
+pathview(gene.data=foldchanges, pathway.id="hsa05310")
+```
+
+![](hsa05310.pathview.png)
+
+##Final step--save our results.
+
+```{r}
+write.csv(res, file="deseq_results.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
