@@ -1,0 +1,40 @@
+---
+title: "class 13"
+author: "Ramola Baviskar (PID A12228297)"
+date: "3/1/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+blast <- read.table("mm-second.x.zebrafish.tsv")
+
+```
+Set the column names
+```{r}
+colnames(blast) <- c("qseqid", "sseqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "bitscore")
+```
+
+```{r}
+plot(blast$pident, blast$bitscore)
+```
+
+We can have very high percent identity even for short alignments where the bitscore (alignment score) won't be that high. Let's try factoring that into our analysis.
+
+
+```{r}
+library(ggplot2)
+ggplot(blast) + aes(pident * (qend - qstart), bitscore) + geom_point(alpha=0.1)
+```
+
+```{r}
+ggplot(blast) + aes(pident * (qend - qstart), bitscore) + geom_point(alpha=0.1) + geom_smooth()
+```
+
